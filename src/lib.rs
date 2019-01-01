@@ -84,6 +84,45 @@ impl Wad {
 
         (name, lump)
     }
+
+    pub fn iter(&self) -> WadIterator {
+        WadIterator::new(self)
+    }
+}
+
+pub struct WadIterator<'a> {
+    index: usize,
+    wad: &'a Wad,
+}
+
+impl<'a> WadIterator<'a> {
+    fn new<'b>(wad: &'b Wad) -> WadIterator<'b> {
+        WadIterator {
+            index: 0,
+            wad,
+        }
+    }
+}
+
+impl<'a> Iterator for WadIterator<'a> {
+    type Item = (&'a str, &'a [u8]);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.wad.len() {
+            self.index += 1;
+            return Some(self.wad.entry(self.index - 1));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl std::ops::Index<usize> for Wad {
+    type Output = [u8];
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.entry(index).1
+    }
 }
 
 pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, ParseError> {
