@@ -16,4 +16,4 @@ Install:
 
 Run:
 
-    wadls doom1.wad
+    wad-ls doom1.wad
