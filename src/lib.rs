@@ -13,16 +13,53 @@ pub enum Kind {
 }
 
 #[derive(Debug)]
-pub enum ParseError {
+pub enum Error {
     Invalid,
     InvalidLength,
     InvalidHeader,
+    InvalidEntry,
+    OutOfBounds,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(fmt, "{}", match self {
+            Error::Invalid => "Invalid WAD file",
+            Error::InvalidLength => "Invalid WAD file length",
+            Error::InvalidHeader => "Invalid WAD file header",
+            Error::InvalidEntry => "Invalid WAD file entry",
+            Error::OutOfBounds => "Index out of bounds",
+        })
+    }
+}
+
+impl std::error::Error for Error {
+}
+
+macro_rules! verify {
+    ($condition:expr, $err:expr) => {
+        if !$condition {
+            return Err($err);
+        }
+    };
 }
 
 #[derive(Debug)]
 pub enum LoadError {
-    ParseError(ParseError),
+    Error(Error),
     IoError(std::io::Error),
+}
+
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            LoadError::Error(e) => write!(fmt, "{}", e),
+            LoadError::IoError(e) => write!(fmt, "{}", e),
+        }
+    }
+}
+
+impl std::error::Error for LoadError {
 }
 
 pub struct Wad {
@@ -41,8 +78,8 @@ impl Wad {
         self.n_entries
     }
 
-    pub fn entry(&self, index: usize) -> (&str, &[u8]) {
-        assert!(index < self.len());
+    pub fn entry(&self, index: usize) -> Result<(&str, &[u8]), Error> {
+        verify!(index < self.len(), Error::OutOfBounds);
 
         let dir_entry_start = self.directory_offset +
             DIRECTORY_ENTRY_BYTE_SIZE * index;
@@ -54,13 +91,13 @@ impl Wad {
         ];
 
         let mut rdr = Cursor::new(directory_entry);
-        let start = rdr.read_i32::<LittleEndian>().expect("Invariant");
-        let length = rdr.read_i32::<LittleEndian>().expect("Invariant");
+        let start = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
+        let length = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
 
-        assert!(length >= 0);
+        verify!(length >= 0, Error::InvalidEntry);
         let length = length as usize;
 
-        assert!(start >= 0);
+        verify!(start >= 0, Error::InvalidEntry);
         let mut start = start as usize;
 
         // If length == 0, start doesn't matter. Some directory entries in
@@ -69,20 +106,20 @@ impl Wad {
             start = HEADER_BYTE_SIZE;
         }
 
-        assert!(start >= HEADER_BYTE_SIZE);
+        verify!(start >= HEADER_BYTE_SIZE, Error::InvalidEntry);
 
-        let end = start.checked_add(length).unwrap();
-        assert!(end <= self.directory_offset);
+        let end = start.checked_add(length).ok_or(Error::InvalidEntry)?;
+        verify!(end <= self.directory_offset, Error::InvalidEntry);
 
         let lump = &self.data[start..end];
 
         let name = &directory_entry[8..16];
-        let name = name.split(|&x| x == 0).next().unwrap();
-        assert!(name.len() > 0);
-        assert!(name.iter().all(|&x| x & 0x80 == 0)); // ASCII
+        let name = name.split(|&x| x == 0).next().ok_or(Error::InvalidEntry)?;
+        verify!(name.len() > 0, Error::InvalidEntry);
+        verify!(name.iter().all(|&x| x & 0x80 == 0), Error::InvalidEntry); // ASCII
         let name = std::str::from_utf8(name).unwrap();
 
-        (name, lump)
+        Ok((name, lump))
     }
 
     pub fn iter(&self) -> WadIterator {
@@ -110,7 +147,7 @@ impl<'a> Iterator for WadIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.wad.len() {
             self.index += 1;
-            return Some(self.wad.entry(self.index - 1));
+            return Some(self.wad.entry(self.index - 1).unwrap());
         } else {
             return None;
         }
@@ -121,19 +158,19 @@ impl std::ops::Index<usize> for Wad {
     type Output = [u8];
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.entry(index).1
+        self.entry(index).unwrap().1
     }
 }
 
-pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, ParseError> {
+pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
     if data.len() < HEADER_BYTE_SIZE {
-        return Err(ParseError::InvalidLength);
+        return Err(Error::InvalidLength);
     }
 
     let kind = match &data[0..4] {
         b"IWAD" => Ok(Kind::IWad),
         b"PWAD" => Ok(Kind::PWad),
-        _ => Err(ParseError::InvalidHeader),
+        _ => Err(Error::InvalidHeader),
     }?;
 
     let mut rdr = Cursor::new(&data[4..12]);
@@ -141,7 +178,7 @@ pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, ParseError> {
     let directory_offset = rdr.read_i32::<LittleEndian>().expect("Checked by guard at top");
 
     if n_entries < 0 || directory_offset < 0 {
-        return Err(ParseError::Invalid);
+        return Err(Error::Invalid);
     }
 
     let n_entries = n_entries as usize;
@@ -149,14 +186,14 @@ pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, ParseError> {
 
     let expected_directory_length = n_entries
         .checked_mul(DIRECTORY_ENTRY_BYTE_SIZE)
-        .ok_or(ParseError::Invalid)?;
+        .ok_or(Error::Invalid)?;
 
     let expected_binary_length = directory_offset
         .checked_add(expected_directory_length)
-        .ok_or(ParseError::Invalid)?;
+        .ok_or(Error::Invalid)?;
 
     if data.len() < expected_binary_length {
-        return Err(ParseError::InvalidLength);
+        return Err(Error::InvalidLength);
     }
     data.truncate(expected_binary_length);
 
@@ -172,5 +209,5 @@ pub fn load_wad_file(filename: impl AsRef<Path>)
     -> Result<Wad, LoadError>
 {
     let data = std::fs::read(filename).map_err(LoadError::IoError)?;
-    parse_wad(data).map_err(LoadError::ParseError)
+    parse_wad(data).map_err(LoadError::Error)
 }

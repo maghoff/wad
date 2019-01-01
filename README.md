@@ -10,10 +10,11 @@ Out of scope: Support for any of the data formats hosted inside a WAD file.
 
 Try it out
 ----------
-Install:
+Install via Rust toolchain:
 
     cargo install wad
 
 Run:
 
     wad-ls doom1.wad
+    wad-read doom1.wad 2

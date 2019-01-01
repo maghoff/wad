@@ -1,12 +1,13 @@
 extern crate wad;
 
 use std::path::PathBuf;
+
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "wadls", about = "List the lumps in a WAD file")]
+#[structopt(name = "wad-ls", about = "List the lumps in a WAD file")]
 struct Opt {
-    /// Input file
+    /// Input WAD file
     #[structopt(parse(from_os_str))]
     input: PathBuf,
 }
