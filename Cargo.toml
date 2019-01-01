@@ -4,6 +4,7 @@ description = "A library with utility binaries for reading WAD files compatible 
 version = "0.1.0"
 authors = ["Magnus Hovland Hoff <maghoff@gmail.com>"]
 edition = "2018"
+license = "MIT"
 
 [dependencies]
 byteorder = "1.2.7"
