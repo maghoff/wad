@@ -1,5 +1,5 @@
 use crate::error::{Error, LoadError};
-use crate::lump::Lump;
+use crate::entry::Entry;
 use crate::wad_iterator::WadIterator;
 
 #[derive(Debug, Copy, Clone)]
@@ -24,7 +24,7 @@ impl Wad {
         self.n_entries
     }
 
-    pub fn entry(&self, index: usize) -> Result<Lump, Error> {
+    pub fn entry(&self, index: usize) -> Result<Entry, Error> {
         verify!(index < self.len(), Error::OutOfBounds);
 
         let dir_entry_start = self.directory_offset +
@@ -58,11 +58,11 @@ impl Wad {
         let end = start.checked_add(length).ok_or(Error::InvalidEntry)?;
         verify!(end <= self.directory_offset, Error::InvalidEntry);
 
-        let data = &self.data[start..end];
+        let lump = &self.data[start..end];
 
-        Ok(Lump {
+        Ok(Entry {
             id,
-            data,
+            lump,
         })
     }
 
@@ -75,7 +75,7 @@ impl std::ops::Index<usize> for Wad {
     type Output = [u8];
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.entry(index).unwrap().data
+        self.entry(index).unwrap().lump
     }
 }
 use std::io::Cursor;

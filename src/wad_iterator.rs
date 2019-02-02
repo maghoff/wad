@@ -1,5 +1,5 @@
 use crate::Wad;
-use crate::Lump;
+use crate::Entry;
 
 pub struct WadIterator<'a> {
     index: usize,
@@ -16,7 +16,7 @@ impl<'a> WadIterator<'a> {
 }
 
 impl<'a> Iterator for WadIterator<'a> {
-    type Item = Lump<'a>;
+    type Item = Entry<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.wad.len() {
