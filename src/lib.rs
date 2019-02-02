@@ -69,6 +69,22 @@ pub struct Wad {
     n_entries: usize,
 }
 
+pub struct Lump<'a> {
+    pub id: u64,
+    pub data: &'a [u8],
+}
+
+impl<'a> Lump<'a> {
+    pub fn name(&self) -> Result<&str, Error> {
+        let buf: &'a [u8; 8] = unsafe { std::mem::transmute(&self.id) };
+        let name = buf.split(|&x| x == 0).next().ok_or(Error::InvalidEntry)?;
+        verify!(name.len() > 0, Error::InvalidEntry);
+        verify!(name.iter().all(|&x| x & 0x80 == 0), Error::InvalidEntry); // ASCII
+
+        Ok(std::str::from_utf8(name).unwrap())
+    }
+}
+
 impl Wad {
     pub fn kind(&self) -> Kind {
         self.kind
@@ -78,7 +94,7 @@ impl Wad {
         self.n_entries
     }
 
-    pub fn entry(&self, index: usize) -> Result<(&str, &[u8]), Error> {
+    pub fn entry(&self, index: usize) -> Result<Lump, Error> {
         verify!(index < self.len(), Error::OutOfBounds);
 
         let dir_entry_start = self.directory_offset +
@@ -93,6 +109,7 @@ impl Wad {
         let mut rdr = Cursor::new(directory_entry);
         let start = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
         let length = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
+        let id = rdr.read_u64::<LittleEndian>().expect("Struct invariant");
 
         verify!(length >= 0, Error::InvalidEntry);
         let length = length as usize;
@@ -111,15 +128,12 @@ impl Wad {
         let end = start.checked_add(length).ok_or(Error::InvalidEntry)?;
         verify!(end <= self.directory_offset, Error::InvalidEntry);
 
-        let lump = &self.data[start..end];
+        let data = &self.data[start..end];
 
-        let name = &directory_entry[8..16];
-        let name = name.split(|&x| x == 0).next().ok_or(Error::InvalidEntry)?;
-        verify!(name.len() > 0, Error::InvalidEntry);
-        verify!(name.iter().all(|&x| x & 0x80 == 0), Error::InvalidEntry); // ASCII
-        let name = std::str::from_utf8(name).unwrap();
-
-        Ok((name, lump))
+        Ok(Lump {
+            id,
+            data,
+        })
     }
 
     pub fn iter(&self) -> WadIterator {
@@ -142,7 +156,7 @@ impl<'a> WadIterator<'a> {
 }
 
 impl<'a> Iterator for WadIterator<'a> {
-    type Item = (&'a str, &'a [u8]);
+    type Item = Lump<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.wad.len() {
@@ -158,7 +172,7 @@ impl std::ops::Index<usize> for Wad {
     type Output = [u8];
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.entry(index).unwrap().1
+        self.entry(index).unwrap().data
     }
 }
 

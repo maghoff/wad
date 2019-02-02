@@ -12,13 +12,13 @@ struct Opt {
     input: PathBuf,
 }
 
-fn main() -> Result<(), wad::LoadError> {
+fn main() -> Result<(), Box<std::error::Error>> {
     let opt = Opt::from_args();
 
     let wad = wad::load_wad_file(opt.input)?;
 
-    for (i, (name, data)) in wad.iter().enumerate() {
-        println!("{}\t{}\t{}", i, data.len(), name);
+    for (i, lump) in wad.iter().enumerate() {
+        println!("{}\t{}\t{}", i, lump.data.len(), lump.name()?);
     }
 
     Ok(())

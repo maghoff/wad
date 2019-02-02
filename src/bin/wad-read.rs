@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let wad = wad::load_wad_file(opt.input)?;
 
-    std::io::stdout().lock().write_all(wad.entry(opt.lump)?.1)?;
+    std::io::stdout().lock().write_all(wad.entry(opt.lump)?.data)?;
 
     Ok(())
 }
