@@ -2,6 +2,9 @@ use crate::error::{Error, LoadError};
 use crate::entry::Entry;
 use crate::wad_iterator::WadIterator;
 
+const HEADER_BYTE_SIZE: usize = 12;
+const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;
+
 #[derive(Debug, Copy, Clone)]
 pub enum Kind {
     IWad,
@@ -15,6 +18,8 @@ pub struct Wad {
     n_entries: usize,
 }
 
+pub type RawEntry = [u8; DIRECTORY_ENTRY_BYTE_SIZE];
+
 impl Wad {
     pub fn kind(&self) -> Kind {
         self.kind
@@ -24,8 +29,8 @@ impl Wad {
         self.n_entries
     }
 
-    pub fn entry(&self, index: usize) -> Result<Entry, Error> {
-        verify!(index < self.len(), Error::OutOfBounds);
+    pub unsafe fn raw_entry_unchecked(&self, index: usize) -> &RawEntry {
+        debug_assert!(index < self.len());
 
         let dir_entry_start = self.directory_offset +
             DIRECTORY_ENTRY_BYTE_SIZE * index;
@@ -35,8 +40,40 @@ impl Wad {
             ..
             dir_entry_start + DIRECTORY_ENTRY_BYTE_SIZE
         ];
+        debug_assert!(directory_entry.len() == DIRECTORY_ENTRY_BYTE_SIZE);
 
-        let mut rdr = Cursor::new(directory_entry);
+        // This is safe because the bounds of the entry table were
+        // verified in parse_wad
+        &*(directory_entry.as_ptr() as *const _)
+    }
+
+    pub fn raw_entry(&self, index: usize) -> Result<&RawEntry, Error> {
+        verify!(index < self.len(), Error::OutOfBounds);
+
+        Ok(unsafe {
+            // This is safe because raw_entry_unchecked only requires us to
+            // do bounds checking
+            self.raw_entry_unchecked(index)
+        })
+    }
+
+    pub fn entry_id_from_raw_entry(raw_entry: &RawEntry) -> u64 {
+        let mut rdr = Cursor::new(&raw_entry[8..16]);
+        rdr.read_u64::<LittleEndian>().expect("Struct invariant")
+    }
+
+    pub unsafe fn entry_id_unchecked(&self, index: usize) -> u64 {
+        let directory_entry = self.raw_entry_unchecked(index);
+        Self::entry_id_from_raw_entry(directory_entry)
+    }
+
+    pub fn entry_id(&self, index: usize) -> Result<u64, Error> {
+        let directory_entry = self.raw_entry(index)?;
+        Ok(Self::entry_id_from_raw_entry(directory_entry))
+    }
+
+    pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
+        let mut rdr = Cursor::new(raw_entry);
         let start = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
         let length = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
         let id = rdr.read_u64::<LittleEndian>().expect("Struct invariant");
@@ -66,6 +103,16 @@ impl Wad {
         })
     }
 
+    pub unsafe fn entry_unchecked(&self, index: usize) -> Result<Entry, Error> {
+        let raw_entry = self.raw_entry_unchecked(index);
+        self.entry_from_raw_entry(raw_entry)
+    }
+
+    pub fn entry(&self, index: usize) -> Result<Entry, Error> {
+        let raw_entry = self.raw_entry(index)?;
+        self.entry_from_raw_entry(raw_entry)
+    }
+
     pub fn iter(&self) -> WadIterator {
         WadIterator::new(self)
     }
@@ -82,9 +129,6 @@ use std::io::Cursor;
 use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-
-const HEADER_BYTE_SIZE: usize = 12;
-const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;
 
 pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
     if data.len() < HEADER_BYTE_SIZE {

@@ -21,7 +21,11 @@ impl<'a> Iterator for WadIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.wad.len() {
             self.index += 1;
-            return Some(self.wad.entry(self.index - 1).unwrap());
+            return Some(unsafe {
+                // This is safe because entry_unchecked only elides the bounds
+                // check, and we do bounds checking in this function
+                self.wad.entry_unchecked(self.index - 1)
+            }.unwrap());
         } else {
             return None;
         }
