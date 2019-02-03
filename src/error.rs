@@ -17,18 +17,21 @@ pub enum Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(fmt, "{}", match self {
-            Error::Invalid => "Invalid WAD file",
-            Error::InvalidLength => "Invalid WAD file length",
-            Error::InvalidHeader => "Invalid WAD file header",
-            Error::InvalidEntry => "Invalid WAD file entry",
-            Error::OutOfBounds => "Index out of bounds",
-        })
+        write!(
+            fmt,
+            "{}",
+            match self {
+                Error::Invalid => "Invalid WAD file",
+                Error::InvalidLength => "Invalid WAD file length",
+                Error::InvalidHeader => "Invalid WAD file header",
+                Error::InvalidEntry => "Invalid WAD file entry",
+                Error::OutOfBounds => "Index out of bounds",
+            }
+        )
     }
 }
 
-impl std::error::Error for Error {
-}
+impl std::error::Error for Error {}
 
 #[derive(Debug)]
 pub enum LoadError {
@@ -45,5 +48,4 @@ impl std::fmt::Display for LoadError {
     }
 }
 
-impl std::error::Error for LoadError {
-}
+impl std::error::Error for LoadError {}

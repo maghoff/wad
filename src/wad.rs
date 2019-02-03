@@ -3,8 +3,8 @@ use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::error::{Error, LoadError};
 use crate::entry::Entry;
+use crate::error::{Error, LoadError};
 use crate::wad_iterator::WadIterator;
 
 const HEADER_BYTE_SIZE: usize = 12;
@@ -37,14 +37,10 @@ impl Wad {
     pub unsafe fn raw_entry_unchecked(&self, index: usize) -> &RawEntry {
         debug_assert!(index < self.len());
 
-        let dir_entry_start = self.directory_offset +
-            DIRECTORY_ENTRY_BYTE_SIZE * index;
+        let dir_entry_start = self.directory_offset + DIRECTORY_ENTRY_BYTE_SIZE * index;
 
-        let directory_entry = &self.data[
-            dir_entry_start
-            ..
-            dir_entry_start + DIRECTORY_ENTRY_BYTE_SIZE
-        ];
+        let directory_entry =
+            &self.data[dir_entry_start..dir_entry_start + DIRECTORY_ENTRY_BYTE_SIZE];
         debug_assert!(directory_entry.len() == DIRECTORY_ENTRY_BYTE_SIZE);
 
         // This is safe because the bounds of the entry table were
@@ -102,10 +98,7 @@ impl Wad {
 
         let lump = &self.data[start..end];
 
-        Ok(Entry {
-            id,
-            lump,
-        })
+        Ok(Entry { id, lump })
     }
 
     pub unsafe fn entry_unchecked(&self, index: usize) -> Result<Entry, Error> {
@@ -143,8 +136,12 @@ pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
     }?;
 
     let mut rdr = Cursor::new(&data[4..12]);
-    let n_entries = rdr.read_i32::<LittleEndian>().expect("Checked by guard at top");
-    let directory_offset = rdr.read_i32::<LittleEndian>().expect("Checked by guard at top");
+    let n_entries = rdr
+        .read_i32::<LittleEndian>()
+        .expect("Checked by guard at top");
+    let directory_offset = rdr
+        .read_i32::<LittleEndian>()
+        .expect("Checked by guard at top");
 
     if n_entries < 0 || directory_offset < 0 {
         return Err(Error::Invalid);
@@ -174,9 +171,7 @@ pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
     })
 }
 
-pub fn load_wad_file(filename: impl AsRef<Path>)
-    -> Result<Wad, LoadError>
-{
+pub fn load_wad_file(filename: impl AsRef<Path>) -> Result<Wad, LoadError> {
     let data = std::fs::read(filename).map_err(LoadError::IoError)?;
     parse_wad(data).map_err(LoadError::Error)
 }

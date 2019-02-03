@@ -6,7 +6,10 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "wad-read", about = "Read the contents of a lump in a WAD file and print it to STDOUT")]
+#[structopt(
+    name = "wad-read",
+    about = "Read the contents of a lump in a WAD file and print it to STDOUT"
+)]
 struct Opt {
     /// Input WAD file
     #[structopt(parse(from_os_str))]
@@ -21,7 +24,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let wad = wad::load_wad_file(opt.input)?;
 
-    std::io::stdout().lock().write_all(wad.entry(opt.lump)?.lump)?;
+    std::io::stdout()
+        .lock()
+        .write_all(wad.entry(opt.lump)?.lump)?;
 
     Ok(())
 }
