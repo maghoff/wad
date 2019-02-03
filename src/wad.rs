@@ -1,3 +1,8 @@
+use std::io::Cursor;
+use std::path::Path;
+
+use byteorder::{LittleEndian, ReadBytesExt};
+
 use crate::error::{Error, LoadError};
 use crate::entry::Entry;
 use crate::wad_iterator::WadIterator;
@@ -125,10 +130,6 @@ impl std::ops::Index<usize> for Wad {
         self.entry(index).unwrap().lump
     }
 }
-use std::io::Cursor;
-use std::path::Path;
-
-use byteorder::{LittleEndian, ReadBytesExt};
 
 pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
     if data.len() < HEADER_BYTE_SIZE {
