@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ByteOrder};
 
 use crate::entry::Entry;
 use crate::error::{Error, LoadError};
-use crate::wad_iterator::WadIterator;
+use crate::iterator::*;
 
 const HEADER_BYTE_SIZE: usize = 12;
 const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;
@@ -71,6 +71,10 @@ impl Wad {
         Ok(Self::entry_id_from_raw_entry(directory_entry))
     }
 
+    pub fn id_iter(&self) -> IdIterator {
+        IdIterator::new(self)
+    }
+
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
         let start = LittleEndian::read_i32(&raw_entry[0..4]);
         let length = LittleEndian::read_i32(&raw_entry[4..8]);
@@ -108,8 +112,8 @@ impl Wad {
         self.entry_from_raw_entry(raw_entry)
     }
 
-    pub fn iter(&self) -> WadIterator {
-        WadIterator::new(self)
+    pub fn entry_iter(&self) -> EntryIterator {
+        EntryIterator::new(self)
     }
 }
 
