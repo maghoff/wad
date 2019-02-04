@@ -1,7 +1,6 @@
-use std::io::Cursor;
 use std::path::Path;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ByteOrder};
 
 use crate::entry::Entry;
 use crate::error::{Error, LoadError};
@@ -59,8 +58,7 @@ impl Wad {
     }
 
     pub fn entry_id_from_raw_entry(raw_entry: &RawEntry) -> u64 {
-        let mut rdr = Cursor::new(&raw_entry[8..16]);
-        rdr.read_u64::<LittleEndian>().expect("Struct invariant")
+        LittleEndian::read_u64(&raw_entry[8..16])
     }
 
     pub unsafe fn entry_id_unchecked(&self, index: usize) -> u64 {
@@ -74,10 +72,9 @@ impl Wad {
     }
 
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
-        let mut rdr = Cursor::new(raw_entry);
-        let start = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
-        let length = rdr.read_i32::<LittleEndian>().expect("Struct invariant");
-        let id = rdr.read_u64::<LittleEndian>().expect("Struct invariant");
+        let start = LittleEndian::read_i32(&raw_entry[0..4]);
+        let length = LittleEndian::read_i32(&raw_entry[4..8]);
+        let id = LittleEndian::read_u64(&raw_entry[8..16]);
 
         verify!(length >= 0, Error::InvalidEntry);
         let length = length as usize;
@@ -135,13 +132,8 @@ pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
         _ => Err(Error::InvalidHeader),
     }?;
 
-    let mut rdr = Cursor::new(&data[4..12]);
-    let n_entries = rdr
-        .read_i32::<LittleEndian>()
-        .expect("Checked by guard at top");
-    let directory_offset = rdr
-        .read_i32::<LittleEndian>()
-        .expect("Checked by guard at top");
+    let n_entries = LittleEndian::read_i32(&data[4..8]);
+    let directory_offset = LittleEndian::read_i32(&data[8..12]);
 
     if n_entries < 0 || directory_offset < 0 {
         return Err(Error::Invalid);
