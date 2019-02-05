@@ -12,10 +12,7 @@ pub struct WadSlice<'a> {
 
 impl<'a> WadSlice<'a> {
     pub(crate) fn new<'n>(data: &'n [u8], directory: &'n [RawEntry]) -> WadSlice<'n> {
-        WadSlice {
-            data,
-            directory,
-        }
+        WadSlice { data, directory }
     }
 
     pub fn len(&self) -> usize {

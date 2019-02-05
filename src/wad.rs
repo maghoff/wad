@@ -1,5 +1,5 @@
-use std::ops::Range;
 use std::path::Path;
+use std::slice::SliceIndex;
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -102,10 +102,10 @@ impl Wad {
         EntryIterator::new(self)
     }
 
-    pub fn slice(&self, range: Range<usize>) -> WadSlice {
+    pub fn slice(&self, slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>) -> WadSlice {
         WadSlice::new(
             &self.data[0..self.directory_offset],
-            &self.directory()[range],
+            &self.directory()[slice_index],
         )
     }
 }
