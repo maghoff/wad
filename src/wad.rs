@@ -37,9 +37,8 @@ impl Wad {
 
     fn directory(&self) -> &[RawEntry] {
         let directory = &self.data[self.directory_offset..];
-        debug_assert!(directory.len() == DIRECTORY_ENTRY_BYTE_SIZE);
 
-        // This is safe because the bounds of the entry table were
+        // This is safe because the bounds and size of the entry table were
         // verified in parse_wad
         unsafe { std::mem::transmute(directory) }
     }
