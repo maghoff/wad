@@ -1,47 +1,40 @@
-use std::ops::Range;
-use std::path::Path;
-
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::entry::Entry;
-use crate::error::{Error, LoadError};
+use crate::error::Error;
 use crate::iterator::*;
-use crate::wad_slice::WadSlice;
+use crate::wad::*;
 
-pub(crate) const HEADER_BYTE_SIZE: usize = 12;
-pub(crate) const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;
-
-#[derive(Debug, Copy, Clone)]
-pub enum Kind {
-    IWad,
-    PWad,
-}
-
-pub struct Wad {
+pub struct WadSlice<'a> {
     kind: Kind,
-    data: Vec<u8>,
-    directory_offset: usize,
-    n_entries: usize,
+    data: &'a [u8],
+    directory: &'a [u8], // FIXME Change to &[RawEntry]?
 }
 
-pub type RawEntry = [u8; DIRECTORY_ENTRY_BYTE_SIZE];
+impl<'a> WadSlice<'a> {
+    pub(crate) fn new<'n>(kind: Kind, data: &'n [u8], directory: &'n [u8]) -> WadSlice<'n> {
+        WadSlice {
+            kind,
+            data,
+            directory,
+        }
+    }
 
-impl Wad {
     pub fn kind(&self) -> Kind {
         self.kind
     }
 
     pub fn len(&self) -> usize {
-        self.n_entries
+        self.directory.len() / DIRECTORY_ENTRY_BYTE_SIZE
     }
 
     pub unsafe fn raw_entry_unchecked(&self, index: usize) -> &RawEntry {
         debug_assert!(index < self.len());
 
-        let dir_entry_start = self.directory_offset + DIRECTORY_ENTRY_BYTE_SIZE * index;
+        let dir_entry_start = DIRECTORY_ENTRY_BYTE_SIZE * index;
 
         let directory_entry =
-            &self.data[dir_entry_start..dir_entry_start + DIRECTORY_ENTRY_BYTE_SIZE];
+            &self.directory[dir_entry_start..dir_entry_start + DIRECTORY_ENTRY_BYTE_SIZE];
         debug_assert!(directory_entry.len() == DIRECTORY_ENTRY_BYTE_SIZE);
 
         // This is safe because the bounds of the entry table were
@@ -73,8 +66,8 @@ impl Wad {
         Ok(Self::entry_id_from_raw_entry(directory_entry))
     }
 
-    pub fn id_iter(&self) -> IdIterator {
-        IdIterator::new(self)
+    pub fn id_iter(&self) -> SliceIdIterator {
+        SliceIdIterator::new(self)
     }
 
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
@@ -97,7 +90,7 @@ impl Wad {
         verify!(start >= HEADER_BYTE_SIZE, Error::InvalidEntry);
 
         let end = start.checked_add(length).ok_or(Error::InvalidEntry)?;
-        verify!(end <= self.directory_offset, Error::InvalidEntry);
+        verify!(end <= self.data.len(), Error::InvalidEntry);
 
         let lump = &self.data[start..end];
 
@@ -114,71 +107,15 @@ impl Wad {
         self.entry_from_raw_entry(raw_entry)
     }
 
-    pub fn entry_iter(&self) -> EntryIterator {
-        EntryIterator::new(self)
-    }
-
-    pub fn slice(&self, range: Range<usize>) -> WadSlice {
-        WadSlice::new(
-            self.kind,
-            &self.data[0..self.directory_offset],
-            &self.data[self.directory_offset + range.start * DIRECTORY_ENTRY_BYTE_SIZE
-                ..self.directory_offset + range.end * DIRECTORY_ENTRY_BYTE_SIZE],
-        )
+    pub fn entry_iter(&self) -> SliceEntryIterator {
+        SliceEntryIterator::new(self)
     }
 }
 
-impl std::ops::Index<usize> for Wad {
+impl<'a> std::ops::Index<usize> for WadSlice<'a> {
     type Output = [u8];
 
     fn index(&self, index: usize) -> &Self::Output {
         self.entry(index).unwrap().lump
     }
-}
-
-pub fn parse_wad(mut data: Vec<u8>) -> Result<Wad, Error> {
-    if data.len() < HEADER_BYTE_SIZE {
-        return Err(Error::InvalidLength);
-    }
-
-    let kind = match &data[0..4] {
-        b"IWAD" => Ok(Kind::IWad),
-        b"PWAD" => Ok(Kind::PWad),
-        _ => Err(Error::InvalidHeader),
-    }?;
-
-    let n_entries = LittleEndian::read_i32(&data[4..8]);
-    let directory_offset = LittleEndian::read_i32(&data[8..12]);
-
-    if n_entries < 0 || directory_offset < 0 {
-        return Err(Error::Invalid);
-    }
-
-    let n_entries = n_entries as usize;
-    let directory_offset = directory_offset as usize;
-
-    let expected_directory_length = n_entries
-        .checked_mul(DIRECTORY_ENTRY_BYTE_SIZE)
-        .ok_or(Error::Invalid)?;
-
-    let expected_binary_length = directory_offset
-        .checked_add(expected_directory_length)
-        .ok_or(Error::Invalid)?;
-
-    if data.len() < expected_binary_length {
-        return Err(Error::InvalidLength);
-    }
-    data.truncate(expected_binary_length);
-
-    Ok(Wad {
-        kind,
-        data,
-        directory_offset,
-        n_entries,
-    })
-}
-
-pub fn load_wad_file(filename: impl AsRef<Path>) -> Result<Wad, LoadError> {
-    let data = std::fs::read(filename).map_err(LoadError::IoError)?;
-    parse_wad(data).map_err(LoadError::Error)
 }

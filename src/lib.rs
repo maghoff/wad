@@ -2,10 +2,12 @@
 mod error;
 
 mod entry;
-mod wad;
 mod iterator;
+mod wad;
+mod wad_slice;
 
 pub use crate::entry::*;
 pub use crate::error::*;
-pub use crate::wad::*;
 pub use crate::iterator::*;
+pub use crate::wad::*;
+pub use crate::wad_slice::*;
