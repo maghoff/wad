@@ -108,6 +108,13 @@ impl Wad {
             &self.directory()[slice_index],
         )
     }
+
+    pub fn as_slice(&self) -> WadSlice {
+        WadSlice::new(
+            &self.data[0..self.directory_offset],
+            self.directory(),
+        )
+    }
 }
 
 impl std::ops::Index<usize> for Wad {
