@@ -4,6 +4,7 @@ use std::slice::SliceIndex;
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::entry::Entry;
+use crate::entry_id::EntryId;
 use crate::error::{Error, LoadError};
 use crate::iterator::*;
 use crate::wad_slice::WadSlice;
@@ -43,16 +44,19 @@ impl Wad {
         unsafe { std::mem::transmute(directory) }
     }
 
-    pub fn entry_id_from_raw_entry(raw_entry: &RawEntry) -> u64 {
-        LittleEndian::read_u64(&raw_entry[8..16])
+    pub fn entry_id_from_raw_entry(raw_entry: &RawEntry) -> EntryId {
+        // This is safe because the static size of RawEntry is bigger than
+        // the size of the requested slice:
+        let id = unsafe { &*(raw_entry[8..16].as_ptr() as *const _) };
+        EntryId::from_bytes(id)
     }
 
-    pub unsafe fn entry_id_unchecked(&self, index: usize) -> u64 {
+    pub unsafe fn entry_id_unchecked(&self, index: usize) -> EntryId {
         let directory_entry = self.directory().get_unchecked(index);
         Self::entry_id_from_raw_entry(directory_entry)
     }
 
-    pub fn entry_id(&self, index: usize) -> Option<u64> {
+    pub fn entry_id(&self, index: usize) -> Option<EntryId> {
         let directory_entry = self.directory().get(index)?;
         Some(Self::entry_id_from_raw_entry(directory_entry))
     }
@@ -64,7 +68,7 @@ impl Wad {
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
         let start = LittleEndian::read_i32(&raw_entry[0..4]);
         let length = LittleEndian::read_i32(&raw_entry[4..8]);
-        let id = LittleEndian::read_u64(&raw_entry[8..16]);
+        let id = Self::entry_id_from_raw_entry(raw_entry);
 
         verify!(length >= 0, Error::InvalidEntry);
         let length = length as usize;

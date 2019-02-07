@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let wad = wad::load_wad_file(opt.input)?;
 
     for (i, entry) in wad.entry_iter().enumerate() {
-        println!("{}\t{}\t{}", i, entry.lump.len(), entry.name()?);
+        println!("{}\t{}\t{}", i, entry.lump.len(), entry.display_name());
     }
 
     Ok(())

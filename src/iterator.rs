@@ -1,4 +1,5 @@
 use crate::Entry;
+use crate::EntryId;
 use crate::Wad;
 use crate::WadSlice;
 
@@ -42,7 +43,7 @@ impl<'a> IdIterator<'a> {
 }
 
 impl<'a> Iterator for IdIterator<'a> {
-    type Item = u64;
+    type Item = EntryId;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.wad.len() {
@@ -98,7 +99,7 @@ impl<'a> SliceIdIterator<'a> {
 }
 
 impl<'a> Iterator for SliceIdIterator<'a> {
-    type Item = u64;
+    type Item = EntryId;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.wad.len() {
