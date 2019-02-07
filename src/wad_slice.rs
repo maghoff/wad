@@ -83,7 +83,7 @@ impl<'a> WadSlice<'a> {
         SliceEntryIterator::new(self)
     }
 
-    pub fn slice(&self, slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>) -> WadSlice {
+    pub fn slice(&self, slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>) -> WadSlice<'a> {
         WadSlice::new(
             self.data,
             &self.directory[slice_index],
