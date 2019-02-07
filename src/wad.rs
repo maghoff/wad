@@ -39,9 +39,15 @@ impl Wad {
     fn directory(&self) -> &[RawEntry] {
         let directory = &self.data[self.directory_offset..];
 
-        // This is safe because the bounds and size of the entry table were
-        // verified in parse_wad
-        unsafe { std::mem::transmute(directory) }
+        unsafe {
+            // This is safe because the bounds and size of the entry table were
+            // verified in parse_wad
+
+            std::slice::from_raw_parts(
+                std::mem::transmute(directory.as_ptr()),
+                directory.len() / DIRECTORY_ENTRY_BYTE_SIZE
+            )
+        }
     }
 
     pub fn entry_id_from_raw_entry(raw_entry: &RawEntry) -> EntryId {
