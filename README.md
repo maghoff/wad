@@ -17,4 +17,4 @@ Install via Rust toolchain:
 Run:
 
     wad-ls doom1.wad
-    wad-read doom1.wad 2
+    wad-read doom1.wad endoom | iconv -f CP437 | sed 's/\(.\)./\1/g' | sed 's/\(.\{80\}\)/\1\n/g'

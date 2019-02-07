@@ -15,18 +15,73 @@ struct Opt {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
 
-    /// Lump index to read and print to STDOUT
-    lump: usize,
+    /// Query for finding the lump to read. The simplest query is just the
+    /// lump name, for example "endoom".
+    ///
+    /// To locate a lump that comes after some given lump, use +, for example
+    /// "e1m3+linedefs".
+    ///
+    /// To locate a lums that appears within a section delimited by *_START
+    /// and *_END, use /. For example "f/step1".
+    ///
+    /// Matching is case insensitive.
+    query: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
 
     let wad = wad::load_wad_file(opt.input)?;
+    println!("{}", wad.len());
+
+    let mut wad = wad.as_slice();
+    println!("{}", wad.len());
+    let mut last = 0;
+    for (index, op) in opt.query.match_indices(|c| c == '+' || c == '/') {
+        let part = &opt.query[last..index];
+        wad = match op {
+            "+" => {
+                let id = wad::EntryId::from_str(part)
+                    .ok_or_else(|| format!("Invalid lump ID: {:?}", part))?;
+                let index = wad
+                    .id_iter()
+                    .position(|x| x == id)
+                    .ok_or_else(|| format!("Lump not found: {:?}", part))?;
+                wad.slice(index..)
+            },
+            "/" => {
+                let start_id = wad::EntryId::from_str(format!("{}_START", part))
+                    .ok_or_else(|| format!("Invalid lump ID: {:?}_START", part))?;
+                let end_id = wad::EntryId::from_str(format!("{}_END", part))
+                    .ok_or_else(|| format!("Invalid lump ID: {:?}_END", part))?;
+
+                let start_index = wad
+                    .id_iter()
+                    .position(|x| x == start_id)
+                    .ok_or_else(|| format!("Lump not found: {:?}_START", part))?;
+
+                let end_index = wad
+                    .id_iter()
+                    .position(|x| x == end_id)
+                    .ok_or_else(|| format!("Lump not found: {:?}_END", part))?;
+
+                wad.slice(start_index+1..end_index)
+            },
+            _ => unreachable!()
+        };
+        last = index + op.len();
+    }
+
+    let name = &opt.query[last..];
+    let id = wad::EntryId::from_str(name).ok_or_else(|| format!("Invalid lump ID: {:?}", name))?;
+    let index = wad.id_iter().position(|x| x == id).ok_or_else(|| format!("Lump not found: {:?}", name))?;
+
+    println!("{}", wad.len());
+    println!("{}", index);
 
     std::io::stdout()
         .lock()
-        .write_all(wad.entry(opt.lump)?.lump)?;
+        .write_all(wad.entry(index)?.lump)?;
 
     Ok(())
 }
