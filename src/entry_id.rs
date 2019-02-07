@@ -30,11 +30,8 @@ impl EntryId {
         Some(Self::from_bytes(&padded))
     }
 
-    /// Lossy display representation. If this was created with from_bytes
-    /// with a buffer containing non-ASCII characters, this function will
-    /// return "?".
-    pub fn display<'a>(&'a self) -> &'a str {
-        let buf: &'a [u8; 8] = unsafe {
+    pub fn as_bytes<'a>(&'a self) -> &'a [u8; 8] {
+        unsafe {
             // I believe this is safe because the target type does not
             // have any particular alignment requirements
 
@@ -42,7 +39,14 @@ impl EntryId {
             // well regardless of endianness.
 
             std::mem::transmute(&self.0)
-        };
+        }
+    }
+
+    /// Lossy display representation. If this was created with from_bytes
+    /// with a buffer containing non-ASCII characters, this function will
+    /// return "?".
+    pub fn display<'a>(&'a self) -> &'a str {
+        let buf = self.as_bytes();
 
         let is_ascii = buf.iter().all(u8::is_ascii);
         if !is_ascii {
@@ -72,9 +76,18 @@ mod test {
     use super::*;
 
     #[test]
+    fn from_bytes_roundtrips_with_as_bytes() {
+        let id = b"E1M1\0\0\0\0";
+        assert_eq!(
+            EntryId::from_bytes(id).as_bytes(),
+            id
+        );
+    }
+
+    #[test]
     fn from_bytes_gives_good_display() {
         assert_eq!(
-            EntryId::from_bytes(&b"E1M1\0\0\0\0").to_string(),
+            EntryId::from_bytes(b"E1M1\0\0\0\0").to_string(),
             "E1M1"
         );
     }
@@ -88,6 +101,15 @@ mod test {
     }
 
     #[test]
+    fn from_bytes_with_non_ascii_roundtrips_with_as_bytes() {
+        let id = [196, 255, 150, 0, 0, 0, 0, 0];
+        assert_eq!(
+            EntryId::from_bytes(&id).as_bytes(),
+            &id
+        );
+    }
+
+    #[test]
     fn from_str() {
         let id = "E1M1";
         let entry_id = EntryId::from_str(&id);
@@ -95,9 +117,19 @@ mod test {
     }
 
     #[test]
+    fn from_str_gives_correct_as_bytes() {
+        let id = "E1M1";
+        let entry_id = EntryId::from_str(&id).unwrap();
+        assert_eq!(
+            entry_id.as_bytes(),
+            b"E1M1\0\0\0\0"
+        );
+    }
+
+    #[test]
     fn from_str_eq_from_bytes() {
         assert_eq!(
-            EntryId::from_bytes(&b"E1M1\0\0\0\0"),
+            EntryId::from_bytes(b"E1M1\0\0\0\0"),
             EntryId::from_str("E1M1").unwrap()
         );
     }
@@ -126,10 +158,18 @@ mod test {
     }
 
     #[test]
-    fn from_str_transforms_to_uppercase() {
+    fn from_str_transforms_to_uppercase_display() {
         assert_eq!(
             EntryId::from_str("e1m1").unwrap().to_string(),
             "E1M1"
+        );
+    }
+
+    #[test]
+    fn from_str_transforms_to_uppercase_as_bytes() {
+        assert_eq!(
+            EntryId::from_str("e1m1").unwrap().as_bytes(),
+            b"E1M1\0\0\0\0"
         );
     }
 
