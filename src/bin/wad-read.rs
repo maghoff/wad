@@ -32,10 +32,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
 
     let wad = wad::load_wad_file(opt.input)?;
-    println!("{}", wad.len());
 
     let mut wad = wad.as_slice();
-    println!("{}", wad.len());
     let mut last = 0;
     for (index, op) in opt.query.match_indices(|c| c == '+' || c == '/') {
         let part = &opt.query[last..index];
@@ -75,9 +73,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let name = &opt.query[last..];
     let id = wad::EntryId::from_str(name).ok_or_else(|| format!("Invalid lump ID: {:?}", name))?;
     let index = wad.id_iter().position(|x| x == id).ok_or_else(|| format!("Lump not found: {:?}", name))?;
-
-    println!("{}", wad.len());
-    println!("{}", index);
 
     std::io::stdout()
         .lock()
