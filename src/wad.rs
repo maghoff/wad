@@ -51,20 +51,15 @@ impl Wad {
     }
 
     pub fn entry_id_from_raw_entry(raw_entry: &RawEntry) -> EntryId {
-        // This is safe because the static size of RawEntry is bigger than
-        // the size of the requested slice:
-        let id = unsafe { &*(raw_entry[8..16].as_ptr() as *const _) };
-        EntryId::from_bytes(id)
+        WadSlice::entry_id_from_raw_entry(raw_entry)
     }
 
     pub unsafe fn entry_id_unchecked(&self, index: usize) -> EntryId {
-        let directory_entry = self.directory().get_unchecked(index);
-        Self::entry_id_from_raw_entry(directory_entry)
+        self.as_slice().entry_id_unchecked(index)
     }
 
     pub fn entry_id(&self, index: usize) -> Option<EntryId> {
-        let directory_entry = self.directory().get(index)?;
-        Some(Self::entry_id_from_raw_entry(directory_entry))
+        self.as_slice().entry_id(index)
     }
 
     pub fn id_iter(&self) -> IdIterator {
@@ -72,40 +67,15 @@ impl Wad {
     }
 
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
-        let start = LittleEndian::read_i32(&raw_entry[0..4]);
-        let length = LittleEndian::read_i32(&raw_entry[4..8]);
-        let id = Self::entry_id_from_raw_entry(raw_entry);
-
-        verify!(length >= 0, Error::InvalidEntry);
-        let length = length as usize;
-
-        verify!(start >= 0, Error::InvalidEntry);
-        let mut start = start as usize;
-
-        // If length == 0, start doesn't matter. Some directory entries in
-        // official doom wads have start == 0, which is really too early.
-        if length == 0 {
-            start = HEADER_BYTE_SIZE;
-        }
-
-        verify!(start >= HEADER_BYTE_SIZE, Error::InvalidEntry);
-
-        let end = start.checked_add(length).ok_or(Error::InvalidEntry)?;
-        verify!(end <= self.directory_offset, Error::InvalidEntry);
-
-        let lump = &self.data[start..end];
-
-        Ok(Entry { id, lump })
+        self.as_slice().entry_from_raw_entry(raw_entry)
     }
 
     pub unsafe fn entry_unchecked(&self, index: usize) -> Result<Entry, Error> {
-        let raw_entry = self.directory().get_unchecked(index);
-        self.entry_from_raw_entry(raw_entry)
+        self.as_slice().entry_unchecked(index)
     }
 
     pub fn entry(&self, index: usize) -> Result<Entry, Error> {
-        let raw_entry = self.directory().get(index).ok_or(Error::OutOfBounds)?;
-        self.entry_from_raw_entry(raw_entry)
+        self.as_slice().entry(index)
     }
 
     pub fn entry_iter(&self) -> EntryIterator {
@@ -113,10 +83,7 @@ impl Wad {
     }
 
     pub fn slice(&self, slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>) -> WadSlice {
-        WadSlice::new(
-            &self.data[0..self.directory_offset],
-            &self.directory()[slice_index],
-        )
+        self.as_slice().slice(slice_index)
     }
 
     pub fn as_slice(&self) -> WadSlice {

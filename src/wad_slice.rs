@@ -42,7 +42,7 @@ impl<'a> WadSlice<'a> {
         SliceIdIterator::new(self)
     }
 
-    pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
+    pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry<'a>, Error> {
         let start = LittleEndian::read_i32(&raw_entry[0..4]);
         let length = LittleEndian::read_i32(&raw_entry[4..8]);
         let id = Self::entry_id_from_raw_entry(raw_entry);
@@ -69,12 +69,12 @@ impl<'a> WadSlice<'a> {
         Ok(Entry { id, lump })
     }
 
-    pub unsafe fn entry_unchecked(&self, index: usize) -> Result<Entry, Error> {
+    pub unsafe fn entry_unchecked(&self, index: usize) -> Result<Entry<'a>, Error> {
         let raw_entry = self.directory.get_unchecked(index);
         self.entry_from_raw_entry(raw_entry)
     }
 
-    pub fn entry(&self, index: usize) -> Result<Entry, Error> {
+    pub fn entry(&self, index: usize) -> Result<Entry<'a>, Error> {
         let raw_entry = self.directory.get(index).ok_or(Error::OutOfBounds)?;
         self.entry_from_raw_entry(raw_entry)
     }
