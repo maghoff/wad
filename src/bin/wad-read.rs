@@ -37,42 +37,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut last = 0;
     for (index, op) in opt.query.match_indices(|c| c == '+' || c == '/') {
         let part = &opt.query[last..index];
+        last = index + op.len();
+
         wad = match op {
             "+" => {
                 let id = wad::EntryId::from_str(part)
                     .ok_or_else(|| format!("Invalid lump ID: {:?}", part))?;
                 let index = wad
-                    .id_iter()
-                    .position(|x| x == id)
+                    .index_of(id)
                     .ok_or_else(|| format!("Lump not found: {:?}", part))?;
                 wad.slice(index..)
             },
             "/" => {
                 let start_id = wad::EntryId::from_str(format!("{}_START", part))
                     .ok_or_else(|| format!("Invalid lump ID: {:?}_START", part))?;
-                let end_id = wad::EntryId::from_str(format!("{}_END", part))
-                    .ok_or_else(|| format!("Invalid lump ID: {:?}_END", part))?;
-
                 let start_index = wad
-                    .id_iter()
-                    .position(|x| x == start_id)
+                    .index_of(start_id)
                     .ok_or_else(|| format!("Lump not found: {:?}_START", part))?;
 
+                let end_id = wad::EntryId::from_str(format!("{}_END", part))
+                    .ok_or_else(|| format!("Invalid lump ID: {:?}_END", part))?;
                 let end_index = wad
-                    .id_iter()
-                    .position(|x| x == end_id)
+                    .index_of(end_id)
                     .ok_or_else(|| format!("Lump not found: {:?}_END", part))?;
 
                 wad.slice(start_index+1..end_index)
             },
             _ => unreachable!()
         };
-        last = index + op.len();
     }
 
     let name = &opt.query[last..];
     let id = wad::EntryId::from_str(name).ok_or_else(|| format!("Invalid lump ID: {:?}", name))?;
-    let index = wad.id_iter().position(|x| x == id).ok_or_else(|| format!("Lump not found: {:?}", name))?;
+    let index = wad.index_of(id).ok_or_else(|| format!("Lump not found: {:?}", name))?;
 
     std::io::stdout()
         .lock()

@@ -66,6 +66,10 @@ impl Wad {
         IdIterator::new(self)
     }
 
+    pub fn index_of(&self, id: impl Into<EntryId>) -> Option<usize> {
+        self.as_slice().index_of(id)
+    }
+
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry, Error> {
         self.as_slice().entry_from_raw_entry(raw_entry)
     }

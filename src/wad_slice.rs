@@ -42,6 +42,11 @@ impl<'a> WadSlice<'a> {
         SliceIdIterator::new(self)
     }
 
+    pub fn index_of(&self, id: impl Into<EntryId>) -> Option<usize> {
+        let id = id.into();
+        self.id_iter().position(|x| x == id)
+    }
+
     pub fn entry_from_raw_entry(&self, raw_entry: &RawEntry) -> Result<Entry<'a>, Error> {
         let start = LittleEndian::read_i32(&raw_entry[0..4]);
         let length = LittleEndian::read_i32(&raw_entry[4..8]);
