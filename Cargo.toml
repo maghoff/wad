@@ -1,7 +1,7 @@
 [package]
 name = "wad"
 description = "A library with utility binaries for reading WAD files compatible with the Doom game engine"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Magnus Hovland Hoff <maghoff@gmail.com>"]
 edition = "2018"
 license = "MIT"
