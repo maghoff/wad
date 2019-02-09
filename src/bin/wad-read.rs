@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use structopt::StructOpt;
+use wad::{load_wad_file, EntryId};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -31,7 +32,7 @@ struct Opt {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
 
-    let wad = wad::load_wad_file(opt.input)?;
+    let wad = load_wad_file(opt.input)?;
 
     let mut wad = wad.as_slice();
     let mut last = 0;
@@ -41,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         wad = match op {
             "+" => {
-                let id = wad::EntryId::from_str(part)
+                let id = EntryId::from_str(part)
                     .ok_or_else(|| format!("Invalid lump ID: {:?}", part))?;
                 let index = wad
                     .index_of(id)
@@ -49,13 +50,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 wad.slice(index..)
             },
             "/" => {
-                let start_id = wad::EntryId::from_str(format!("{}_START", part))
+                let start_id = EntryId::from_str(format!("{}_START", part))
                     .ok_or_else(|| format!("Invalid lump ID: {:?}_START", part))?;
                 let start_index = wad
                     .index_of(start_id)
                     .ok_or_else(|| format!("Lump not found: {:?}_START", part))?;
 
-                let end_id = wad::EntryId::from_str(format!("{}_END", part))
+                let end_id = EntryId::from_str(format!("{}_END", part))
                     .ok_or_else(|| format!("Invalid lump ID: {:?}_END", part))?;
                 let end_index = wad
                     .index_of(end_id)
@@ -68,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let name = &opt.query[last..];
-    let id = wad::EntryId::from_str(name).ok_or_else(|| format!("Invalid lump ID: {:?}", name))?;
+    let id = EntryId::from_str(name).ok_or_else(|| format!("Invalid lump ID: {:?}", name))?;
     let index = wad.index_of(id).ok_or_else(|| format!("Lump not found: {:?}", name))?;
 
     std::io::stdout()
