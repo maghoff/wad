@@ -22,8 +22,7 @@ impl EntryId {
             padded[i] = buf[i].to_ascii_uppercase();
         }
 
-        let is_ascii = padded.iter().all(u8::is_ascii);
-        if !is_ascii {
+        if !padded.is_ascii() {
             return None;
         }
 
@@ -70,6 +69,34 @@ impl std::fmt::Display for EntryId {
         std::fmt::Display::fmt(self.display(), fmt)
     }
 }
+
+impl From<&[u8; 8]> for EntryId {
+    fn from(src: &[u8; 8]) -> Self {
+        EntryId::from_bytes(src)
+    }
+}
+
+macro_rules! widening_from_impl {
+    ($n:expr) => {
+        impl From<&[u8; $n]> for EntryId {
+            fn from(src: &[u8; $n]) -> Self {
+                let mut buf = [0; 8];
+                for i in 0..$n {
+                    buf[i] = src[i];
+                }
+                EntryId::from_bytes(&buf)
+            }
+        }
+    };
+}
+
+widening_from_impl!(7);
+widening_from_impl!(6);
+widening_from_impl!(5);
+widening_from_impl!(4);
+widening_from_impl!(3);
+widening_from_impl!(2);
+widening_from_impl!(1);
 
 #[cfg(test)]
 mod test {
@@ -178,6 +205,46 @@ mod test {
         assert_eq!(
             EntryId::from_str("e1m1").unwrap(),
             EntryId::from_str("E1M1").unwrap()
+        );
+    }
+
+    #[test]
+    fn from_array8_impl() {
+        assert_eq!(
+            EntryId::from_bytes(b"E1M1\0\0\0\0"),
+            b"E1M1\0\0\0\0".into()
+        );
+    }
+
+    #[test]
+    fn from_array7_impl() {
+        assert_eq!(
+            EntryId::from_bytes(b"E1M1\0\0\0\0"),
+            b"E1M1\0\0\0".into()
+        );
+    }
+
+    #[test]
+    fn from_array6_impl() {
+        assert_eq!(
+            EntryId::from_bytes(b"E1M1\0\0\0\0"),
+            b"E1M1\0\0".into()
+        );
+    }
+
+    #[test]
+    fn from_array5_impl() {
+        assert_eq!(
+            EntryId::from_bytes(b"E1M1\0\0\0\0"),
+            b"E1M1\0".into()
+        );
+    }
+
+    #[test]
+    fn from_array1_impl() {
+        assert_eq!(
+            EntryId::from_bytes(b"E\0\0\0\0\0\0\0"),
+            b"E".into()
         );
     }
 }
