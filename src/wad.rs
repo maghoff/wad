@@ -86,6 +86,10 @@ impl Wad {
         EntryIterator::new(self)
     }
 
+    pub fn by_id(&self, id: impl Into<EntryId>) -> Option<&[u8]> {
+        self.as_slice().by_id(id)
+    }
+
     pub fn slice(&self, slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>) -> WadSlice {
         self.as_slice().slice(slice_index)
     }
