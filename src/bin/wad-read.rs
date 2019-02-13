@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let index = wad
                     .index_of(id)
                     .ok_or_else(|| format!("Lump not found: {:?}", part))?;
-                wad.slice(index..)
+                wad.slice(index + 1..)
             }
             "/" => {
                 let start_id = EntryId::from_str(format!("{}_START", part))
