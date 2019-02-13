@@ -1,5 +1,5 @@
-use std::slice::SliceIndex;
 use byteorder::{ByteOrder, LittleEndian};
+use std::slice::SliceIndex;
 
 use crate::entry::Entry;
 use crate::entry_id::EntryId;
@@ -95,11 +95,11 @@ impl<'a> WadSlice<'a> {
         Some(entry.lump)
     }
 
-    pub fn slice(&self, slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>) -> WadSlice<'a> {
-        WadSlice::new(
-            self.data,
-            &self.directory[slice_index],
-        )
+    pub fn slice(
+        &self,
+        slice_index: impl SliceIndex<[RawEntry], Output = [RawEntry]>,
+    ) -> WadSlice<'a> {
+        WadSlice::new(self.data, &self.directory[slice_index])
     }
 }
 

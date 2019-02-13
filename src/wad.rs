@@ -45,7 +45,7 @@ impl Wad {
 
             std::slice::from_raw_parts(
                 std::mem::transmute(directory.as_ptr()),
-                directory.len() / DIRECTORY_ENTRY_BYTE_SIZE
+                directory.len() / DIRECTORY_ENTRY_BYTE_SIZE,
             )
         }
     }
@@ -95,10 +95,7 @@ impl Wad {
     }
 
     pub fn as_slice(&self) -> WadSlice {
-        WadSlice::new(
-            &self.data[0..self.directory_offset],
-            self.directory(),
-        )
+        WadSlice::new(&self.data[0..self.directory_offset], self.directory())
     }
 }
 

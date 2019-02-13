@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .index_of(id)
                     .ok_or_else(|| format!("Lump not found: {:?}", part))?;
                 wad.slice(index..)
-            },
+            }
             "/" => {
                 let start_id = EntryId::from_str(format!("{}_START", part))
                     .ok_or_else(|| format!("Invalid lump ID: {:?}_START", part))?;
@@ -62,19 +62,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .index_of(end_id)
                     .ok_or_else(|| format!("Lump not found: {:?}_END", part))?;
 
-                wad.slice(start_index+1..end_index)
-            },
-            _ => unreachable!()
+                wad.slice(start_index + 1..end_index)
+            }
+            _ => unreachable!(),
         };
     }
 
     let name = &opt.query[last..];
     let id = EntryId::from_str(name).ok_or_else(|| format!("Invalid lump ID: {:?}", name))?;
-    let index = wad.index_of(id).ok_or_else(|| format!("Lump not found: {:?}", name))?;
+    let index = wad
+        .index_of(id)
+        .ok_or_else(|| format!("Lump not found: {:?}", name))?;
 
-    std::io::stdout()
-        .lock()
-        .write_all(wad.entry(index)?.lump)?;
+    let lump = wad.entry(index)?.lump;
+    std::io::stdout().lock().write_all(lump)?;
 
     Ok(())
 }

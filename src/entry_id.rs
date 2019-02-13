@@ -52,7 +52,10 @@ impl EntryId {
             return "?";
         }
 
-        let name = buf.split(|&x| x == 0).next().expect("split returns at least one item");
+        let name = buf
+            .split(|&x| x == 0)
+            .next()
+            .expect("split returns at least one item");
 
         std::str::from_utf8(name).unwrap()
     }
@@ -105,18 +108,12 @@ mod test {
     #[test]
     fn from_bytes_roundtrips_with_as_bytes() {
         let id = b"E1M1\0\0\0\0";
-        assert_eq!(
-            EntryId::from_bytes(id).as_bytes(),
-            id
-        );
+        assert_eq!(EntryId::from_bytes(id).as_bytes(), id);
     }
 
     #[test]
     fn from_bytes_gives_good_display() {
-        assert_eq!(
-            EntryId::from_bytes(b"E1M1\0\0\0\0").to_string(),
-            "E1M1"
-        );
+        assert_eq!(EntryId::from_bytes(b"E1M1\0\0\0\0").to_string(), "E1M1");
     }
 
     #[test]
@@ -130,10 +127,7 @@ mod test {
     #[test]
     fn from_bytes_with_non_ascii_roundtrips_with_as_bytes() {
         let id = [196, 255, 150, 0, 0, 0, 0, 0];
-        assert_eq!(
-            EntryId::from_bytes(&id).as_bytes(),
-            &id
-        );
+        assert_eq!(EntryId::from_bytes(&id).as_bytes(), &id);
     }
 
     #[test]
@@ -147,10 +141,7 @@ mod test {
     fn from_str_gives_correct_as_bytes() {
         let id = "E1M1";
         let entry_id = EntryId::from_str(&id).unwrap();
-        assert_eq!(
-            entry_id.as_bytes(),
-            b"E1M1\0\0\0\0"
-        );
+        assert_eq!(entry_id.as_bytes(), b"E1M1\0\0\0\0");
     }
 
     #[test]
@@ -171,9 +162,7 @@ mod test {
 
     #[test]
     fn from_str_different_is_not_eq() {
-        assert!(
-            EntryId::from_str("E1M2").unwrap() != EntryId::from_str("E1M1").unwrap()
-        );
+        assert!(EntryId::from_str("E1M2").unwrap() != EntryId::from_str("E1M1").unwrap());
     }
 
     #[test]
@@ -186,10 +175,7 @@ mod test {
 
     #[test]
     fn from_str_transforms_to_uppercase_display() {
-        assert_eq!(
-            EntryId::from_str("e1m1").unwrap().to_string(),
-            "E1M1"
-        );
+        assert_eq!(EntryId::from_str("e1m1").unwrap().to_string(), "E1M1");
     }
 
     #[test]
@@ -210,41 +196,26 @@ mod test {
 
     #[test]
     fn from_array8_impl() {
-        assert_eq!(
-            EntryId::from_bytes(b"E1M1\0\0\0\0"),
-            b"E1M1\0\0\0\0".into()
-        );
+        assert_eq!(EntryId::from_bytes(b"E1M1\0\0\0\0"), b"E1M1\0\0\0\0".into());
     }
 
     #[test]
     fn from_array7_impl() {
-        assert_eq!(
-            EntryId::from_bytes(b"E1M1\0\0\0\0"),
-            b"E1M1\0\0\0".into()
-        );
+        assert_eq!(EntryId::from_bytes(b"E1M1\0\0\0\0"), b"E1M1\0\0\0".into());
     }
 
     #[test]
     fn from_array6_impl() {
-        assert_eq!(
-            EntryId::from_bytes(b"E1M1\0\0\0\0"),
-            b"E1M1\0\0".into()
-        );
+        assert_eq!(EntryId::from_bytes(b"E1M1\0\0\0\0"), b"E1M1\0\0".into());
     }
 
     #[test]
     fn from_array5_impl() {
-        assert_eq!(
-            EntryId::from_bytes(b"E1M1\0\0\0\0"),
-            b"E1M1\0".into()
-        );
+        assert_eq!(EntryId::from_bytes(b"E1M1\0\0\0\0"), b"E1M1\0".into());
     }
 
     #[test]
     fn from_array1_impl() {
-        assert_eq!(
-            EntryId::from_bytes(b"E\0\0\0\0\0\0\0"),
-            b"E".into()
-        );
+        assert_eq!(EntryId::from_bytes(b"E\0\0\0\0\0\0\0"), b"E".into());
     }
 }
