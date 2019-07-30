@@ -1,6 +1,6 @@
 use byteorder::{ByteOrder, NativeEndian};
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 pub struct EntryId(u64);
 
 impl EntryId {
